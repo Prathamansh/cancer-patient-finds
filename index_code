@@ -1,0 +1,41 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Load the dataset
+data = pd.read_csv('data.csv')
+
+# Data Cleaning
+data = data.drop(columns=['Unnamed: 32', 'id'])  # Drop unnecessary columns
+
+# Function to filter patients by diagnosis
+def filter_patients(diagnosis):
+    return data[data['diagnosis'] == diagnosis]
+
+# Function to visualize data
+def visualize_data():
+    # Countplot of Diagnosis
+    sns.countplot(x='diagnosis', data=data, palette='viridis')
+    plt.title('Diagnosis Count')
+    plt.show()
+
+    # Pairplot for selected features
+    selected_features = ['radius_mean', 'texture_mean', 'area_mean', 'smoothness_mean', 'diagnosis']
+    sns.pairplot(data[selected_features], hue='diagnosis', palette='viridis')
+    plt.show()
+
+    # Correlation Heatmap
+    plt.figure(figsize=(12, 10))
+    correlation_matrix = data.corr()
+    sns.heatmap(correlation_matrix, annot=False, cmap='coolwarm', fmt='.2f')
+    plt.title('Feature Correlation Heatmap')
+    plt.show()
+
+# Example usage
+if __name__ == "__main__":
+    # Filter patients with malignant diagnosis
+    malignant_patients = filter_patients('M')
+    print(f"Number of malignant patients: {len(malignant_patients)}")
+
+    # Visualize data
+    visualize_data()
