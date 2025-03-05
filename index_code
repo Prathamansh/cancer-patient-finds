@@ -1,41 +1,124 @@
 import pandas as pd
-import matplotlib.pyplot as plt
+import numpy as np
 import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 
-# Load the dataset
+# 📌 Load the Dataset
 data = pd.read_csv('data.csv')
 
-# Data Cleaning
-data = data.drop(columns=['Unnamed: 32', 'id'])  # Drop unnecessary columns
+# 📌 Data Preprocessing
+data.drop(columns=['Unnamed: 32', 'id'], inplace=True)  # Remove unnecessary columns
+data['diagnosis'] = data['diagnosis'].map({'M': 1, 'B': 0})  # Convert diagnosis to numeric
 
-# Function to filter patients by diagnosis
-def filter_patients(diagnosis):
-    return data[data['diagnosis'] == diagnosis]
+# 📊 Function to Display Summary Stats
+def data_summary():
+    print("\n📌 Data Overview:")
+    print(data.head())
+    print("\n📌 Missing Values:")
+    print(data.isnull().sum())
+    print("\n📌 Data Statistics:")
+    print(data.describe())
 
-# Function to visualize data
+# 📈 Function to Visualize Data
 def visualize_data():
-    # Countplot of Diagnosis
-    sns.countplot(x='diagnosis', data=data, palette='viridis')
-    plt.title('Diagnosis Count')
-    plt.show()
+    plt.figure(figsize=(12, 5))
 
-    # Pairplot for selected features
-    selected_features = ['radius_mean', 'texture_mean', 'area_mean', 'smoothness_mean', 'diagnosis']
-    sns.pairplot(data[selected_features], hue='diagnosis', palette='viridis')
-    plt.show()
+    # Diagnosis Count
+    plt.subplot(1, 2, 1)
+    sns.countplot(x='diagnosis', data=data, palette='coolwarm')
+    plt.xticks([0, 1], ["Benign (0)", "Malignant (1)"])
+    plt.title('Diagnosis Count')
 
     # Correlation Heatmap
-    plt.figure(figsize=(12, 10))
+    plt.subplot(1, 2, 2)
     correlation_matrix = data.corr()
     sns.heatmap(correlation_matrix, annot=False, cmap='coolwarm', fmt='.2f')
     plt.title('Feature Correlation Heatmap')
+
+    plt.tight_layout()
     plt.show()
 
-# Example usage
-if __name__ == "__main__":
-    # Filter patients with malignant diagnosis
-    malignant_patients = filter_patients('M')
-    print(f"Number of malignant patients: {len(malignant_patients)}")
+# 📌 Feature Selection (Find Most Important Feature)
+def find_key_features():
+    correlation_matrix = data.corr()['diagnosis'].abs().sort_values(ascending=False)
+    print("\n🔍 Top 5 Most Important Features for Cancer Diagnosis:")
+    print(correlation_matrix[1:6])
 
-    # Visualize data
+# 📌 Train Machine Learning Model
+def train_model():
+    # Splitting Data
+    X = data.drop(columns=['diagnosis'])  # Features
+    y = data['diagnosis']  # Target Variable
+
+    # Train-Test Split
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Standardization (Scaling Data)
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
+
+    # Train Random Forest Model
+    model = RandomForestClassifier(n_estimators=100, random_state=42)
+    model.fit(X_train, y_train)
+
+    # Predictions
+    y_pred = model.predict(X_test)
+
+    # Model Performance
+    print("\n🎯 Model Accuracy:", accuracy_score(y_test, y_pred))
+    print("\n📌 Classification Report:")
+    print(classification_report(y_test, y_pred))
+
+    return model, scaler
+
+# 📌 Function to Predict Cancer for a New Patient
+def predict_new_patient(model, scaler):
+    print("\n💡 Enter New Patient Data for Prediction:")
+    new_data = []
+    for col in data.columns[1:]:  # Skip 'diagnosis' column
+        val = float(input(f"Enter value for {col}: "))
+        new_data.append(val)
+
+    # Convert to NumPy array and scale
+    new_data = np.array(new_data).reshape(1, -1)
+    new_data = scaler.transform(new_data)
+
+    # Make Prediction
+    prediction = model.predict(new_data)
+    result = "Malignant (Cancer Detected)" if prediction[0] == 1 else "Benign (No Cancer)"
+    print(f"\n🔍 Prediction: {result}")
+
+# 📌 Main Function to Run the Project
+def main():
+    print("\n📊 Breast Cancer Analysis & Prediction System")
+    print("=" * 50)
+
+    # Show Data Summary
+    data_summary()
+
+    # Visualize Data
     visualize_data()
+
+    # Find Key Features
+    find_key_features()
+
+    # Train Model
+    model, scaler = train_model()
+
+    # Predict for New Patient
+    while True:
+        choice = input("\n🔹 Do you want to test a new patient? (yes/no): ").strip().lower()
+        if choice == 'yes':
+            predict_new_patient(model, scaler)
+        else:
+            print("🔹 Exiting... Thank you!")
+            break
+
+# Run the Program
+if __name__ == "__main__":
+    main()
